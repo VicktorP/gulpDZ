@@ -9,12 +9,14 @@ const cache = require("gulp-cache");
 const fs = require("fs");
 const ttf2woff = require("gulp-ttf2woff");
 const ttf2woff2 = require("gulp-ttf2woff2");
+const fileinclude = require('gulp-file-include');
+
 
 function createFiles() {
   createFolders();
 
   setTimeout(() => {
-    fs.writeFile("app/index.html", "hello html", function (err) {
+    fs.writeFile("app/pages/index.html", "hello html", function (err) {
       if (err) {
         throw err;
       } else console.log("file created");
@@ -52,8 +54,10 @@ function createFiles() {
   }, 500);
 }
 
+
 function createFolders() {
   src("*.*", { read: false })
+    .pipe(dest("app/pages/parts"))
     .pipe(dest("app/scss"))
     .pipe(dest("app/img"))
     .pipe(dest("app/_img"))
@@ -61,6 +65,17 @@ function createFolders() {
     .pipe(dest("app/fonts"))
     .pipe(dest("dist"));
 }
+
+
+function fileInclude() {
+  return src(['app/pages/**/*.html'])
+    .pipe(fileinclude({
+            prefix: '@@',
+            basepath: '@file'
+          }))
+    .pipe(dest('app'))
+}
+
 
 function convertStyleCss() {
   return src("./app/scss/style.scss")
@@ -100,12 +115,15 @@ function watchFilesChanges() {
 
   watch("./app/_img", imageCompress);
 
+  watch("./app/pages/**/*.html", fileInclude);
+
   watch("./app/*.html").on("change", sync.reload);
   watch("./app/css/*.css").on("change", sync.reload);
   watch("./app/js/*.js").on("change", sync.reload);
 
   watch("app/fonts/**.ttf", series(convertFonts, fontsStyle));
 }
+
 
 function browserSync() {
   sync.init({
@@ -120,10 +138,11 @@ exports.convertStyleCss = convertStyleCss;
 exports.watchFilesChanges = watchFilesChanges;
 exports.browserSync = browserSync;
 exports.imageCompress = imageCompress;
+exports.fileInclude = fileInclude;
 
 exports.struct = createFiles;
 
-exports.default = parallel( convertStyleCss, browserSync, watchFilesChanges, series(convertFonts, fontsStyle) );
+exports.default = parallel( fileInclude, convertStyleCss, browserSync, watchFilesChanges, series(convertFonts, fontsStyle) );
 
 function moveHTML() {
   return src("./app/*.html").pipe(dest("./dist"));
